@@ -1,0 +1,4 @@
+node_modules/
+puzzles/*.json
+.DS_Store
+
