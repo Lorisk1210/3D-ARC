@@ -57,6 +57,23 @@ export class PuzzleManager {
         }
     }
     
+    getCurrentInputGrid() {
+        if (this.currentExample === 2) {
+            return this.puzzle.test[0].input;
+        } else {
+            const example = this.puzzle.train[this.currentExample];
+            return example.input;
+        }
+    }
+    
+    deepCopyGrid(grid) {
+        return grid.map(layer => 
+            layer.map(row => 
+                row.slice()
+            )
+        );
+    }
+    
     setCurrentGrid(data) {
         if (this.currentExample === 2) {
             if (this.currentView === 'input') {

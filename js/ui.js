@@ -41,6 +41,10 @@ export class UIManager {
             this.applyDimensions();
         });
         
+        document.getElementById('copy-from-input').addEventListener('click', () => {
+            this.copyFromInput();
+        });
+        
         document.getElementById('new-puzzle').addEventListener('click', () => {
             if (confirm('Create a new puzzle? Current puzzle will be lost.')) {
                 this.newPuzzle();
@@ -101,6 +105,7 @@ export class UIManager {
         this.puzzleManager.setCurrentExample(index);
         this.loadCurrentGrid();
         this.updateUI();
+        this.updateCopyButtonVisibility();
     }
     
     selectView(view) {
@@ -114,6 +119,7 @@ export class UIManager {
         this.puzzleManager.setCurrentView(view);
         this.loadCurrentGrid();
         this.updateUI();
+        this.updateCopyButtonVisibility();
     }
     
     changeLayer(delta) {
@@ -150,6 +156,30 @@ export class UIManager {
         }
     }
     
+    updateCopyButtonVisibility() {
+        const copyButton = document.getElementById('copy-from-input');
+        const view = this.puzzleManager.currentView;
+        const inputDims = this.puzzleManager.inputDimensions;
+        const outputDims = this.puzzleManager.outputDimensions;
+        
+        const sizesMatch = inputDims.x === outputDims.x && 
+                          inputDims.y === outputDims.y && 
+                          inputDims.z === outputDims.z;
+        
+        if (view === 'output' && sizesMatch) {
+            copyButton.style.display = 'block';
+        } else {
+            copyButton.style.display = 'none';
+        }
+    }
+    
+    copyFromInput() {
+        const inputGrid = this.puzzleManager.getCurrentInputGrid();
+        const copiedGrid = this.puzzleManager.deepCopyGrid(inputGrid);
+        this.puzzleManager.setCurrentGrid(copiedGrid);
+        this.loadCurrentGrid();
+    }
+    
     applyDimensions() {
         const inputX = parseInt(document.getElementById('input-x').value);
         const inputY = parseInt(document.getElementById('input-y').value);
@@ -164,6 +194,7 @@ export class UIManager {
         
         this.loadCurrentGrid();
         this.updateUI();
+        this.updateCopyButtonVisibility();
     }
     
     newPuzzle() {
@@ -206,6 +237,7 @@ export class UIManager {
         this.grid3d.createGrid(dims, grid);
         this.updateLayerDisplay();
         this.updateLayerControlVisibility();
+        this.updateCopyButtonVisibility();
     }
     
     updateUI() {
@@ -232,6 +264,7 @@ export class UIManager {
         
         this.updateLayerDisplay();
         this.updateLayerControlVisibility();
+        this.updateCopyButtonVisibility();
     }
     
     selectColor(colorId) {
