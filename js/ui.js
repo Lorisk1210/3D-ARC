@@ -1,5 +1,3 @@
-import { getColorName } from './colors.js';
-
 export class UIManager {
     constructor(grid3d, puzzleManager) {
         this.grid3d = grid3d;
@@ -30,15 +28,11 @@ export class UIManager {
             this.changeLayer(1);
         });
         
-        document.getElementById('layer-slider').addEventListener('input', (e) => {
-            const layer = parseInt(e.target.value);
-            this.setLayer(layer);
-        });
-        
         document.querySelectorAll('input[name="view-mode"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 if (e.target.checked) {
                     this.grid3d.setViewMode(e.target.value);
+                    this.updateLayerControlVisibility();
                 }
             });
         });
@@ -142,11 +136,18 @@ export class UIManager {
         
         document.getElementById('current-layer').textContent = currentLayer;
         document.getElementById('total-layers').textContent = totalLayers;
-        document.getElementById('layer-slider').max = totalLayers - 1;
-        document.getElementById('layer-slider').value = this.grid3d.currentLayer;
         
         document.getElementById('prev-layer').disabled = currentLayer === 1;
         document.getElementById('next-layer').disabled = currentLayer === totalLayers;
+    }
+    
+    updateLayerControlVisibility() {
+        const layerControlSection = document.getElementById('layer-control-section');
+        if (this.grid3d.viewMode === 'all') {
+            layerControlSection.style.display = 'none';
+        } else {
+            layerControlSection.style.display = 'block';
+        }
     }
     
     applyDimensions() {
@@ -204,6 +205,7 @@ export class UIManager {
         const dims = this.puzzleManager.getCurrentDimensions();
         this.grid3d.createGrid(dims, grid);
         this.updateLayerDisplay();
+        this.updateLayerControlVisibility();
     }
     
     updateUI() {
@@ -229,11 +231,11 @@ export class UIManager {
         }
         
         this.updateLayerDisplay();
+        this.updateLayerControlVisibility();
     }
     
     selectColor(colorId) {
         this.grid3d.setSelectedColor(colorId);
-        document.getElementById('selected-color-name').textContent = getColorName(colorId);
     }
     
     selectColorByKey(colorId) {

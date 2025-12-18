@@ -59,20 +59,6 @@
 
         <div class="right-panel">
             <section class="panel-section">
-                <h3>Layer Control</h3>
-                <div class="layer-control">
-                    <div class="layer-display">
-                        Layer: <span id="current-layer">1</span> / <span id="total-layers">3</span>
-                    </div>
-                    <div class="layer-buttons">
-                        <button id="prev-layer" class="layer-btn">← Prev</button>
-                        <button id="next-layer" class="layer-btn">Next →</button>
-                    </div>
-                    <input type="range" id="layer-slider" min="0" max="2" value="0" class="layer-slider">
-                </div>
-            </section>
-
-            <section class="panel-section">
                 <h3>View Mode</h3>
                 <div class="view-mode">
                     <label>
@@ -86,13 +72,23 @@
                 </div>
             </section>
 
+            <section class="panel-section" id="layer-control-section">
+                <h3>Layer Control</h3>
+                <div class="layer-control">
+                    <div class="layer-display">
+                        Layer: <span id="current-layer">1</span> / <span id="total-layers">3</span>
+                    </div>
+                    <div class="layer-buttons">
+                        <button id="prev-layer" class="layer-btn">← Prev</button>
+                        <button id="next-layer" class="layer-btn">Next →</button>
+                    </div>
+                </div>
+            </section>
+
             <section class="panel-section">
                 <h3>Color Palette</h3>
                 <div class="color-palette" id="color-palette">
                     <!-- Colors will be generated dynamically -->
-                </div>
-                <div class="selected-color">
-                    Selected: <span id="selected-color-name">0 (Empty)</span>
                 </div>
             </section>
         </div>
