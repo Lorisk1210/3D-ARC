@@ -158,8 +158,8 @@ export class Grid3D {
     updateCameraPosition() {
         const maxDim = Math.max(this.dimensions.x, this.dimensions.y, this.dimensions.z);
         const distance = maxDim * 2.5;
-        // Position camera to look at the front-top-left origin
-        this.camera.position.set(distance * 0.6, distance * 0.5, distance);
+        // Position camera to look directly from the front
+        this.camera.position.set(0, 0, distance);
         this.camera.lookAt(0, 0, 0);
         this.controls.target.set(0, 0, 0);
         this.controls.update();
@@ -179,15 +179,22 @@ export class Grid3D {
         this.cubes.forEach(cube => {
             const z = cube.userData.z;
             
-            if (this.viewMode === 'single') {
-                // Show all layers but mute non-selected ones
+            if (this.viewMode === 'xray') {
+                // Show all layers but mute non-selected ones (Xray Mode)
                 cube.visible = true;
                 if (z === this.currentLayer) {
                     cube.material.opacity = 1;
                     cube.userData.wireframe.material.opacity = 1;
                 } else {
-                    cube.material.opacity = 0.4;
-                    cube.userData.wireframe.material.opacity = 0.3;
+                    cube.material.opacity = 0.15;
+                    cube.userData.wireframe.material.opacity = 0.1;
+                }
+            } else if (this.viewMode === 'single') {
+                // Show only the selected layer (Single Layer Mode)
+                cube.visible = z === this.currentLayer;
+                if (cube.visible) {
+                    cube.material.opacity = 1;
+                    cube.userData.wireframe.material.opacity = 1;
                 }
             } else if (this.viewMode === 'all') {
                 cube.visible = true;
@@ -251,8 +258,8 @@ export class Grid3D {
         if (intersects.length > 0) {
             let cube = null;
             
-            if (this.viewMode === 'single') {
-                // In single layer mode, find the first cube from the current layer
+            if (this.viewMode === 'xray' || this.viewMode === 'single') {
+                // In xray or single layer mode, find the first cube from the current layer
                 // This allows clicking through other layers to reach the selected layer
                 for (const intersect of intersects) {
                     if (intersect.object.userData.z === this.currentLayer) {

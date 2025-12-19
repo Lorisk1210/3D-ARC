@@ -255,13 +255,6 @@ export class UIManager {
             document.getElementById('output-z').value = dims.z;
         }
         
-        const solutionIndicator = document.getElementById('solution-indicator');
-        if (example === 2 && view === 'output') {
-            solutionIndicator.style.display = 'block';
-        } else {
-            solutionIndicator.style.display = 'none';
-        }
-        
         this.updateLayerDisplay();
         this.updateLayerControlVisibility();
         this.updateCopyButtonVisibility();
