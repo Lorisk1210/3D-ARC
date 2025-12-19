@@ -11,7 +11,7 @@
         <div class="left-panel">
             <section class="panel-section">
                 <h3>Puzzle Navigator</h3>
-                <div class="puzzle-nav">
+                <div class="puzzle-nav" id="puzzle-nav">
                     <button class="nav-btn active" data-example="0">Example 1</button>
                     <button class="nav-btn" data-example="1">Example 2</button>
                     <button class="nav-btn" data-example="2">Test</button>
@@ -28,29 +28,6 @@
                     (Viewing Solution)
                 </div>
             </section>
-
-            <section class="panel-section">
-                <h3>Dimensions</h3>
-                <div class="dimension-controls">
-                    <div class="dim-group">
-                        <label>Input Grid (Z, Y, X):</label>
-                        <div class="dim-inputs">
-                            <input type="number" id="input-z" min="1" max="10" value="3" title="Layers (Z)">
-                            <input type="number" id="input-y" min="1" max="10" value="3" title="Rows (Y)">
-                            <input type="number" id="input-x" min="1" max="10" value="3" title="Columns (X)">
-                        </div>
-                    </div>
-                    <div class="dim-group">
-                        <label>Output Grid (Z, Y, X):</label>
-                        <div class="dim-inputs">
-                            <input type="number" id="output-z" min="1" max="10" value="3" title="Layers (Z)">
-                            <input type="number" id="output-y" min="1" max="10" value="3" title="Rows (Y)">
-                            <input type="number" id="output-x" min="1" max="10" value="3" title="Columns (X)">
-                        </div>
-                    </div>
-                    <button id="apply-dimensions" class="action-btn">Apply Dimensions</button>
-                </div>
-            </section>
         </div>
 
         <div class="canvas-container">
@@ -58,44 +35,85 @@
         </div>
 
         <div class="right-panel">
-            <section class="panel-section">
-                <h3>View Mode</h3>
-                <div class="view-mode">
-                    <label>
-                        <input type="radio" name="view-mode" value="all" checked>
-                        All Layers
-                    </label>
-                    <label>
-                        <input type="radio" name="view-mode" value="xray">
-                        Xray Mode
-                    </label>
-                    <label>
-                        <input type="radio" name="view-mode" value="single">
-                        Single Layer
-                    </label>
-                </div>
-                <button id="copy-from-input" class="action-btn" style="display: none; width: 100%; margin-top: 10px;">Copy from Input</button>
-            </section>
-
-            <section class="panel-section" id="layer-control-section">
-                <h3>Layer Control</h3>
-                <div class="layer-control">
-                    <div class="layer-display">
-                        Layer: <span id="current-layer">1</span> / <span id="total-layers">3</span>
+            <div class="right-panel-tabs">
+                <button class="panel-tab" data-tab="view">View</button>
+                <button class="panel-tab active" data-tab="settings">Settings</button>
+            </div>
+            
+            <div class="tab-content active" id="tab-view">
+                <section class="panel-section">
+                    <h3>View Mode</h3>
+                    <div class="view-mode">
+                        <label>
+                            <input type="radio" name="view-mode" value="all" checked>
+                            All Layers
+                        </label>
+                        <label>
+                            <input type="radio" name="view-mode" value="xray">
+                            Xray Mode
+                        </label>
+                        <label>
+                            <input type="radio" name="view-mode" value="single">
+                            Single Layer
+                        </label>
                     </div>
-                    <div class="layer-buttons">
-                        <button id="prev-layer" class="layer-btn">← Prev</button>
-                        <button id="next-layer" class="layer-btn">Next →</button>
-                    </div>
-                </div>
-            </section>
+                    <button id="copy-from-input" class="action-btn" style="display: none; width: 100%; margin-top: 10px;">Copy from Input</button>
+                </section>
 
-            <section class="panel-section">
-                <h3>Color Palette</h3>
-                <div class="color-palette" id="color-palette">
-                    <!-- Colors will be generated dynamically -->
-                </div>
-            </section>
+                <section class="panel-section" id="layer-control-section">
+                    <h3>Layer Control</h3>
+                    <div class="layer-control">
+                        <div class="layer-display">
+                            Layer: <span id="current-layer">1</span> / <span id="total-layers">3</span>
+                        </div>
+                        <div class="layer-buttons">
+                            <button id="prev-layer" class="layer-btn">← Prev</button>
+                            <button id="next-layer" class="layer-btn">Next →</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h3>Color Palette</h3>
+                    <div class="color-palette" id="color-palette">
+                        <!-- Colors will be generated dynamically -->
+                    </div>
+                </section>
+            </div>
+            
+            <div class="tab-content" id="tab-settings">
+                <section class="panel-section">
+                    <h3>Number of Examples</h3>
+                    <div class="example-count-control">
+                        <label for="example-count">Training Examples:</label>
+                        <input type="number" id="example-count" min="1" max="10" value="2">
+                        <button id="apply-example-count" class="action-btn" style="width: 100%; margin-top: 10px;">Apply</button>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h3>Dimensions</h3>
+                    <div class="dimension-controls">
+                        <div class="dim-group">
+                            <label>Input Grid (Z, Y, X):</label>
+                            <div class="dim-inputs">
+                                <input type="number" id="input-z" min="1" max="10" value="3" title="Layers (Z)">
+                                <input type="number" id="input-y" min="1" max="10" value="3" title="Rows (Y)">
+                                <input type="number" id="input-x" min="1" max="10" value="3" title="Columns (X)">
+                            </div>
+                        </div>
+                        <div class="dim-group">
+                            <label>Output Grid (Z, Y, X):</label>
+                            <div class="dim-inputs">
+                                <input type="number" id="output-z" min="1" max="10" value="3" title="Layers (Z)">
+                                <input type="number" id="output-y" min="1" max="10" value="3" title="Rows (Y)">
+                                <input type="number" id="output-x" min="1" max="10" value="3" title="Columns (X)">
+                            </div>
+                        </div>
+                        <button id="apply-dimensions" class="action-btn">Apply Dimensions</button>
+                    </div>
+                </section>
+            </div>
         </div>
     </div>
 

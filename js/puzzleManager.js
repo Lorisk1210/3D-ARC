@@ -1,5 +1,6 @@
 export class PuzzleManager {
     constructor() {
+        this.numExamples = 2;
         this.puzzle = this.createEmptyPuzzle();
         this.currentExample = 0;
         this.currentView = 'input';
@@ -8,17 +9,15 @@ export class PuzzleManager {
     }
     
     createEmptyPuzzle() {
+        const train = [];
+        for (let i = 0; i < this.numExamples; i++) {
+            train.push({
+                input: this.createEmptyGrid(3, 3, 3),
+                output: this.createEmptyGrid(3, 3, 3)
+            });
+        }
         return {
-            train: [
-                {
-                    input: this.createEmptyGrid(3, 3, 3),
-                    output: this.createEmptyGrid(3, 3, 3)
-                },
-                {
-                    input: this.createEmptyGrid(3, 3, 3),
-                    output: this.createEmptyGrid(3, 3, 3)
-                }
-            ],
+            train: train,
             test: [
                 {
                     input: this.createEmptyGrid(3, 3, 3)
@@ -45,7 +44,8 @@ export class PuzzleManager {
     }
     
     getCurrentGrid() {
-        if (this.currentExample === 2) {
+        const testIndex = this.numExamples;
+        if (this.currentExample === testIndex) {
             return this.currentView === 'input' 
                 ? this.puzzle.test[0].input 
                 : this.puzzle.solution;
@@ -58,7 +58,8 @@ export class PuzzleManager {
     }
     
     getCurrentInputGrid() {
-        if (this.currentExample === 2) {
+        const testIndex = this.numExamples;
+        if (this.currentExample === testIndex) {
             return this.puzzle.test[0].input;
         } else {
             const example = this.puzzle.train[this.currentExample];
@@ -75,7 +76,8 @@ export class PuzzleManager {
     }
     
     setCurrentGrid(data) {
-        if (this.currentExample === 2) {
+        const testIndex = this.numExamples;
+        if (this.currentExample === testIndex) {
             if (this.currentView === 'input') {
                 this.puzzle.test[0].input = data;
             } else {
@@ -108,28 +110,24 @@ export class PuzzleManager {
     setDimensions(view, dimensions) {
         if (view === 'input') {
             this.inputDimensions = { ...dimensions };
-            this.puzzle.train[0].input = this.resizeGrid(
-                this.puzzle.train[0].input, 
-                dimensions
-            );
-            this.puzzle.train[1].input = this.resizeGrid(
-                this.puzzle.train[1].input, 
-                dimensions
-            );
+            for (let i = 0; i < this.puzzle.train.length; i++) {
+                this.puzzle.train[i].input = this.resizeGrid(
+                    this.puzzle.train[i].input, 
+                    dimensions
+                );
+            }
             this.puzzle.test[0].input = this.resizeGrid(
                 this.puzzle.test[0].input, 
                 dimensions
             );
         } else {
             this.outputDimensions = { ...dimensions };
-            this.puzzle.train[0].output = this.resizeGrid(
-                this.puzzle.train[0].output, 
-                dimensions
-            );
-            this.puzzle.train[1].output = this.resizeGrid(
-                this.puzzle.train[1].output, 
-                dimensions
-            );
+            for (let i = 0; i < this.puzzle.train.length; i++) {
+                this.puzzle.train[i].output = this.resizeGrid(
+                    this.puzzle.train[i].output, 
+                    dimensions
+                );
+            }
             this.puzzle.solution = this.resizeGrid(
                 this.puzzle.solution, 
                 dimensions
@@ -180,6 +178,37 @@ export class PuzzleManager {
         this.currentView = 'input';
     }
     
+    setNumExamples(count) {
+        const oldCount = this.numExamples;
+        this.numExamples = count;
+        
+        if (count > oldCount) {
+            // Add new examples
+            for (let i = oldCount; i < count; i++) {
+                this.puzzle.train.push({
+                    input: this.createEmptyGrid(
+                        this.inputDimensions.x,
+                        this.inputDimensions.y,
+                        this.inputDimensions.z
+                    ),
+                    output: this.createEmptyGrid(
+                        this.outputDimensions.x,
+                        this.outputDimensions.y,
+                        this.outputDimensions.z
+                    )
+                });
+            }
+        } else if (count < oldCount) {
+            // Remove examples
+            this.puzzle.train = this.puzzle.train.slice(0, count);
+            
+            // Adjust current example if needed
+            if (this.currentExample >= count) {
+                this.currentExample = Math.max(0, count - 1);
+            }
+        }
+    }
+    
     exportToJSON() {
         return JSON.stringify(this.puzzle, null, 2);
     }
@@ -188,8 +217,8 @@ export class PuzzleManager {
         try {
             const data = JSON.parse(jsonString);
             
-            if (!data.train || data.train.length !== 2) {
-                throw new Error('Invalid puzzle format: must have exactly 2 training examples');
+            if (!data.train || data.train.length < 1) {
+                throw new Error('Invalid puzzle format: must have at least 1 training example');
             }
             
             if (!data.test || data.test.length !== 1) {
@@ -200,6 +229,7 @@ export class PuzzleManager {
                 throw new Error('Invalid puzzle format: must have a solution');
             }
             
+            this.numExamples = data.train.length;
             this.puzzle = data;
             
             const input0 = data.train[0].input;
@@ -226,7 +256,7 @@ export class PuzzleManager {
     
     validatePuzzle() {
         try {
-            if (this.puzzle.train.length !== 2) return false;
+            if (this.puzzle.train.length < 1) return false;
             if (this.puzzle.test.length !== 1) return false;
             if (!this.puzzle.solution) return false;
             

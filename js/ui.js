@@ -6,12 +6,16 @@ export class UIManager {
     }
     
     setupEventListeners() {
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const example = parseInt(e.target.dataset.example);
-                this.selectExample(example);
+        // Tab switching for right panel
+        document.querySelectorAll('.panel-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const tabName = e.target.dataset.tab;
+                this.switchTab(tabName);
             });
         });
+        
+        // Example buttons (will be regenerated dynamically)
+        this.updateExampleButtons();
         
         document.querySelectorAll('.view-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -39,6 +43,10 @@ export class UIManager {
         
         document.getElementById('apply-dimensions').addEventListener('click', () => {
             this.applyDimensions();
+        });
+        
+        document.getElementById('apply-example-count').addEventListener('click', () => {
+            this.applyExampleCount();
         });
         
         document.getElementById('copy-from-input').addEventListener('click', () => {
@@ -94,13 +102,72 @@ export class UIManager {
         });
     }
     
+    switchTab(tabName) {
+        document.querySelectorAll('.panel-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+    }
+    
+    updateExampleButtons() {
+        const navContainer = document.getElementById('puzzle-nav');
+        navContainer.innerHTML = '';
+        
+        const numExamples = this.puzzleManager.numExamples;
+        
+        for (let i = 0; i < numExamples; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'nav-btn';
+            if (i === 0) btn.classList.add('active');
+            btn.dataset.example = i;
+            btn.textContent = `Example ${i + 1}`;
+            btn.addEventListener('click', (e) => {
+                const example = parseInt(e.target.dataset.example);
+                this.selectExample(example);
+            });
+            navContainer.appendChild(btn);
+        }
+        
+        const testBtn = document.createElement('button');
+        testBtn.className = 'nav-btn';
+        testBtn.dataset.example = numExamples;
+        testBtn.textContent = 'Test';
+        testBtn.addEventListener('click', (e) => {
+            const example = parseInt(e.target.dataset.example);
+            this.selectExample(example);
+        });
+        navContainer.appendChild(testBtn);
+    }
+    
+    applyExampleCount() {
+        const count = parseInt(document.getElementById('example-count').value);
+        if (count < 1 || count > 10) {
+            alert('Number of examples must be between 1 and 10');
+            return;
+        }
+        
+        this.saveCurrentGrid();
+        this.puzzleManager.setNumExamples(count);
+        this.updateExampleButtons();
+        this.loadCurrentGrid();
+        this.updateUI();
+    }
+    
     selectExample(index) {
         this.saveCurrentGrid();
         
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`[data-example="${index}"]`).classList.add('active');
+        const btn = document.querySelector(`[data-example="${index}"]`);
+        if (btn) {
+            btn.classList.add('active');
+        }
         
         this.puzzleManager.setCurrentExample(index);
         this.loadCurrentGrid();
@@ -202,7 +269,7 @@ export class UIManager {
         this.puzzleManager.setCurrentExample(0);
         this.puzzleManager.setCurrentView('input');
         
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        this.updateExampleButtons();
         document.querySelector('[data-example="0"]').classList.add('active');
         
         document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
@@ -214,6 +281,7 @@ export class UIManager {
         document.getElementById('output-x').value = 3;
         document.getElementById('output-y').value = 3;
         document.getElementById('output-z').value = 3;
+        document.getElementById('example-count').value = this.puzzleManager.numExamples;
         
         this.loadCurrentGrid();
         this.updateUI();
@@ -253,6 +321,11 @@ export class UIManager {
             document.getElementById('output-x').value = dims.x;
             document.getElementById('output-y').value = dims.y;
             document.getElementById('output-z').value = dims.z;
+        }
+        
+        const exampleCountInput = document.getElementById('example-count');
+        if (exampleCountInput) {
+            exampleCountInput.value = this.puzzleManager.numExamples;
         }
         
         this.updateLayerDisplay();
@@ -370,11 +443,13 @@ export class UIManager {
                     this.puzzleManager.setCurrentExample(0);
                     this.puzzleManager.setCurrentView('input');
                     
-                    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                    this.updateExampleButtons();
                     document.querySelector('[data-example="0"]').classList.add('active');
                     
                     document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
                     document.querySelector('[data-view="input"]').classList.add('active');
+                    
+                    document.getElementById('example-count').value = this.puzzleManager.numExamples;
                     
                     this.loadCurrentGrid();
                     this.updateUI();
@@ -419,11 +494,13 @@ export class UIManager {
                 this.puzzleManager.setCurrentExample(0);
                 this.puzzleManager.setCurrentView('input');
                 
-                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                this.updateExampleButtons();
                 document.querySelector('[data-example="0"]').classList.add('active');
                 
                 document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
                 document.querySelector('[data-view="input"]').classList.add('active');
+                
+                document.getElementById('example-count').value = this.puzzleManager.numExamples;
                 
                 this.loadCurrentGrid();
                 this.updateUI();
