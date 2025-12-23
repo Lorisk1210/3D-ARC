@@ -8,6 +8,50 @@ const app = express();
 const PORT = 3000;
 const PUZZLES_DIR = path.join(__dirname, 'puzzles');
 
+function isNumberArray(arr) {
+    return Array.isArray(arr) && arr.every(item => typeof item === 'number');
+}
+
+function formatCompactJSON(obj, indent = 0) {
+    const indentStr = ' '.repeat(indent);
+    const nextIndent = indent + 2;
+    const nextIndentStr = ' '.repeat(nextIndent);
+    
+    if (Array.isArray(obj)) {
+        if (isNumberArray(obj)) {
+            return '[' + obj.join(', ') + ']';
+        }
+        if (obj.length === 0) return '[]';
+        
+        const items = obj.map(item => {
+            if (isNumberArray(item)) {
+                return nextIndentStr + '[' + item.join(', ') + ']';
+            }
+            return nextIndentStr + formatCompactJSON(item, nextIndent).trim();
+        });
+        return '[\n' + items.join(',\n') + '\n' + indentStr + ']';
+    }
+    
+    if (obj !== null && typeof obj === 'object') {
+        const keys = Object.keys(obj);
+        if (keys.length === 0) return '{}';
+        
+        const items = keys.map(key => {
+            const value = obj[key];
+            let formattedValue;
+            if (isNumberArray(value)) {
+                formattedValue = '[' + value.join(', ') + ']';
+            } else {
+                formattedValue = formatCompactJSON(value, nextIndent);
+            }
+            return nextIndentStr + '"' + key + '": ' + formattedValue;
+        });
+        return '{\n' + items.join(',\n') + '\n' + indentStr + '}';
+    }
+    
+    return JSON.stringify(obj);
+}
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
@@ -28,7 +72,7 @@ app.post('/api/puzzles', async (req, res) => {
         const id = uuidv4();
         const filePath = path.join(PUZZLES_DIR, `${id}.json`);
         
-        await fs.writeFile(filePath, JSON.stringify(puzzle, null, 2), 'utf8');
+        await fs.writeFile(filePath, formatCompactJSON(puzzle) + '\n', 'utf8');
         
         res.json({ success: true, id: id });
     } catch (error) {

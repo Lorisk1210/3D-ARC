@@ -170,6 +170,12 @@ export class UIManager {
         }
         
         this.puzzleManager.setCurrentExample(index);
+        
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-view="${this.puzzleManager.currentView}"]`).classList.add('active');
+        
         this.loadCurrentGrid();
         this.updateUI();
         this.updateCopyButtonVisibility();
@@ -399,21 +405,9 @@ export class UIManager {
                         
                         const info = document.createElement('div');
                         info.className = 'puzzle-item-info';
-                        info.innerHTML = `<div>Puzzle</div><div class="puzzle-item-id">${puzzle.id}</div>`;
-                        
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'puzzle-item-delete';
-                        deleteBtn.textContent = 'Delete';
-                        deleteBtn.addEventListener('click', async (e) => {
-                            e.stopPropagation();
-                            if (confirm('Delete this puzzle?')) {
-                                await this.deletePuzzle(puzzle.id);
-                                this.showPuzzleList();
-                            }
-                        });
+                        info.innerHTML = `<div class="puzzle-item-id">${puzzle.id}</div>`;
                         
                         item.appendChild(info);
-                        item.appendChild(deleteBtn);
                         
                         item.addEventListener('click', () => {
                             this.loadPuzzle(puzzle.id);

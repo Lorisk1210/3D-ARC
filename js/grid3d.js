@@ -82,7 +82,7 @@ export class Grid3D {
         this.currentLayer = 0;
         
         const cubeSize = 0.9;
-        const spacing = 1;
+        const spacing = 1.1;
         
         const offsetX = (dimensions.x - 1) * spacing / 2;
         const offsetY = (dimensions.y - 1) * spacing / 2;
@@ -198,8 +198,15 @@ export class Grid3D {
                 }
             } else if (this.viewMode === 'all') {
                 cube.visible = true;
-                cube.material.opacity = 0.9;
-                cube.userData.wireframe.material.opacity = 0.9;
+                // Black cubes (color 0) should have lower opacity
+                const colorValue = this.gridData[z][cube.userData.y][cube.userData.x];
+                if (colorValue === 0) {
+                    cube.material.opacity = 0.2;
+                    cube.userData.wireframe.material.opacity = 0.15;
+                } else {
+                    cube.material.opacity = 0.9;
+                    cube.userData.wireframe.material.opacity = 0.9;
+                }
             }
         });
     }

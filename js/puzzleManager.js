@@ -6,6 +6,7 @@ export class PuzzleManager {
         this.currentView = 'input';
         this.inputDimensions = { x: 3, y: 3, z: 3 };
         this.outputDimensions = { x: 3, y: 3, z: 3 };
+        this.exampleViewState = {}; // Track last view for each example
     }
     
     createEmptyPuzzle() {
@@ -101,10 +102,19 @@ export class PuzzleManager {
     
     setCurrentExample(index) {
         this.currentExample = index;
+        // Restore the last view for this example, or default to 'input' if first time
+        if (this.exampleViewState[index] !== undefined) {
+            this.currentView = this.exampleViewState[index];
+        } else {
+            this.currentView = 'input';
+            this.exampleViewState[index] = 'input';
+        }
     }
     
     setCurrentView(view) {
         this.currentView = view;
+        // Remember this view for the current example
+        this.exampleViewState[this.currentExample] = view;
     }
     
     setDimensions(view, dimensions) {
@@ -176,6 +186,7 @@ export class PuzzleManager {
         this.outputDimensions = { x: 3, y: 3, z: 3 };
         this.currentExample = 0;
         this.currentView = 'input';
+        this.exampleViewState = {}; // Reset view state tracking
     }
     
     setNumExamples(count) {
@@ -210,7 +221,51 @@ export class PuzzleManager {
     }
     
     exportToJSON() {
-        return JSON.stringify(this.puzzle, null, 2);
+        return this.formatCompactJSON(this.puzzle);
+    }
+    
+    isNumberArray(arr) {
+        return Array.isArray(arr) && arr.every(item => typeof item === 'number');
+    }
+    
+    formatCompactJSON(obj, indent = 0) {
+        const indentStr = ' '.repeat(indent);
+        const nextIndent = indent + 2;
+        const nextIndentStr = ' '.repeat(nextIndent);
+        
+        if (Array.isArray(obj)) {
+            if (this.isNumberArray(obj)) {
+                return '[' + obj.join(', ') + ']';
+            }
+            if (obj.length === 0) return '[]';
+            
+            const items = obj.map(item => {
+                if (this.isNumberArray(item)) {
+                    return nextIndentStr + '[' + item.join(', ') + ']';
+                }
+                return nextIndentStr + this.formatCompactJSON(item, nextIndent).trim();
+            });
+            return '[\n' + items.join(',\n') + '\n' + indentStr + ']';
+        }
+        
+        if (obj !== null && typeof obj === 'object') {
+            const keys = Object.keys(obj);
+            if (keys.length === 0) return '{}';
+            
+            const items = keys.map(key => {
+                const value = obj[key];
+                let formattedValue;
+                if (this.isNumberArray(value)) {
+                    formattedValue = '[' + value.join(', ') + ']';
+                } else {
+                    formattedValue = this.formatCompactJSON(value, nextIndent);
+                }
+                return nextIndentStr + '"' + key + '": ' + formattedValue;
+            });
+            return '{\n' + items.join(',\n') + '\n' + indentStr + '}';
+        }
+        
+        return JSON.stringify(obj);
     }
     
     importFromJSON(jsonString) {
@@ -231,6 +286,7 @@ export class PuzzleManager {
             
             this.numExamples = data.train.length;
             this.puzzle = data;
+            this.exampleViewState = {}; // Reset view state tracking when importing
             
             const input0 = data.train[0].input;
             this.inputDimensions = {
