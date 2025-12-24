@@ -1,3 +1,5 @@
+import { showAlert, showConfirm } from './alert.js';
+
 export class UIManager {
     constructor(grid3d, puzzleManager) {
         this.grid3d = grid3d;
@@ -53,14 +55,14 @@ export class UIManager {
             this.copyFromInput();
         });
         
-        document.getElementById('new-puzzle').addEventListener('click', () => {
-            if (confirm('Create a new puzzle? Current puzzle will be lost.')) {
+        document.getElementById('new-puzzle').addEventListener('click', async () => {
+            if (await showConfirm('Create a new puzzle? Current puzzle will be lost.')) {
                 this.newPuzzle();
             }
         });
         
-        document.getElementById('clear-current').addEventListener('click', () => {
-            if (confirm('Clear the current grid?')) {
+        document.getElementById('clear-current').addEventListener('click', async () => {
+            if (await showConfirm('Clear the current grid?')) {
                 this.clearCurrent();
             }
         });
@@ -147,7 +149,7 @@ export class UIManager {
     applyExampleCount() {
         const count = parseInt(document.getElementById('example-count').value);
         if (count < 1 || count > 10) {
-            alert('Number of examples must be between 1 and 10');
+            showAlert('Number of examples must be between 1 and 10');
             return;
         }
         
@@ -355,7 +357,7 @@ export class UIManager {
         this.saveCurrentGrid();
         
         if (!this.puzzleManager.validatePuzzle()) {
-            alert('Puzzle is incomplete or invalid. Please ensure all grids are properly configured.');
+            showAlert('Puzzle is incomplete or invalid. Please ensure all grids are properly configured.');
             return;
         }
         
@@ -373,13 +375,13 @@ export class UIManager {
             const result = await response.json();
             
             if (result.success) {
-                alert(`Puzzle saved successfully! ID: ${result.id}`);
+                showAlert(`Puzzle saved successfully! ID: ${result.id}`);
             } else {
-                alert('Failed to save puzzle: ' + result.error);
+                showAlert('Failed to save puzzle: ' + result.error);
             }
         } catch (error) {
             console.error('Error saving puzzle:', error);
-            alert('Failed to save puzzle. Make sure the server is running on http://localhost:3000');
+            showAlert('Failed to save puzzle. Make sure the server is running on http://localhost:3000');
         }
     }
     
@@ -449,14 +451,13 @@ export class UIManager {
                     this.updateUI();
                     
                     document.getElementById('puzzle-list-modal').style.display = 'none';
-                    alert('Puzzle loaded successfully!');
                 }
             } else {
-                alert('Failed to load puzzle: ' + result.error);
+                showAlert('Failed to load puzzle: ' + result.error);
             }
         } catch (error) {
             console.error('Error loading puzzle:', error);
-            alert('Failed to load puzzle. Make sure the server is running.');
+            showAlert('Failed to load puzzle. Make sure the server is running.');
         }
     }
     
@@ -468,11 +469,11 @@ export class UIManager {
             const result = await response.json();
             
             if (!result.success) {
-                alert('Failed to delete puzzle: ' + result.error);
+                showAlert('Failed to delete puzzle: ' + result.error);
             }
         } catch (error) {
             console.error('Error deleting puzzle:', error);
-            alert('Failed to delete puzzle.');
+            showAlert('Failed to delete puzzle.');
         }
     }
     
@@ -499,7 +500,7 @@ export class UIManager {
                 this.loadCurrentGrid();
                 this.updateUI();
                 
-                alert('Puzzle imported successfully!');
+                showAlert('Puzzle imported successfully!');
             }
         };
         reader.readAsText(file);

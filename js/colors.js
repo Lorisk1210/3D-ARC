@@ -8,7 +8,7 @@ export const COLORS = {
     6: { hex: 0xFF6600, rgb: [255, 102, 0], name: 'Orange' },
     7: { hex: 0x00FFFF, rgb: [0, 255, 255], name: 'Cyan' },
     8: { hex: 0x9900FF, rgb: [153, 0, 255], name: 'Purple' },
-    9: { hex: 0x8B4513, rgb: [139, 69, 19], name: 'Brown' }
+    9: { hex: 0x828282, rgb: [130, 130, 130], name: 'Gray' }
 };
 
 export function getColorHex(colorId) {
