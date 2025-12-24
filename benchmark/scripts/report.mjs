@@ -2,6 +2,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
 import { readJsonFile, sanitizeForPathSegment } from '../utils.mjs';
+import {
+  error,
+  warn,
+  table,
+  emptyLine,
+  formatDuration,
+  formatCost,
+  formatAccuracy,
+  c,
+  dim,
+  SYMBOLS,
+} from '../cli.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,10 +40,8 @@ async function getAllCachedResults() {
           const cachePath = path.join(modelDir, file);
           try {
             const result = await readJsonFile(cachePath);
-            // Use the original modelId from the result, or fall back to unsanitized directory name
             const modelId = result.modelId || sanitizedModelId.replace(/__/g, '/').replace(/--/g, ':');
             
-            // Only include completed results (have prediction and not truncated)
             const isCompleted = result.prediction !== null && result.prediction !== undefined && result.finishReason !== 'length';
             
             if (isCompleted) {
@@ -41,16 +51,15 @@ async function getAllCachedResults() {
               results.get(modelId).push(result);
             }
           } catch (err) {
-            console.warn(`Failed to read ${cachePath}: ${err.message}`);
+            // Silently skip invalid files
           }
         }
       } catch (err) {
-        console.warn(`Failed to read model directory ${sanitizedModelId}: ${err.message}`);
+        // Silently skip inaccessible directories
       }
     }
   } catch (err) {
     if (err.code === 'ENOENT') {
-      console.log('No cache directory found. Run "npm run benchmark" first.');
       return results;
     }
     throw err;
@@ -59,61 +68,77 @@ async function getAllCachedResults() {
   return results;
 }
 
-function formatPercentage(value, total) {
-  if (total === 0) return '0.00%';
-  return ((value / total) * 100).toFixed(2) + '%';
-}
-
-function formatCost(cost) {
-  if (cost === 0) return '$0.0000';
-  return '$' + cost.toFixed(6);
-}
-
-function formatTime(ms) {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(2)}s`;
-}
-
-async function main() {
-  console.log('Generating benchmark report...\n');
-
-  const config = await readJsonFile(CONFIG_PATH);
-  const models = config.models;
-  const allResults = await getAllCachedResults();
-
-  if (allResults.size === 0) {
-    console.log('No cached results found.');
-    console.log('Run "npm run benchmark" first to generate results.');
-    return;
-  }
-
+function getLeaderboard(allResults, models) {
+  const leaderboard = [];
+  
   for (const modelConfig of models) {
     const modelId = modelConfig.id;
     const results = allResults.get(modelId) || [];
-
-    if (results.length === 0) {
-      console.log(`Model: ${modelId}`);
-      console.log('  No results found.\n');
-      continue;
-    }
-
+    
+    if (results.length === 0) continue;
+    
     const correct = results.filter((r) => r.correct).length;
     const total = results.length;
+    const accuracy = total > 0 ? correct / total : 0;
     const totalCost = results.reduce((sum, r) => sum + (r.cost || 0), 0);
     const avgCost = totalCost / total;
     const totalTime = results.reduce((sum, r) => sum + (r.elapsedMs || 0), 0);
     const avgTime = totalTime / total;
-
-    console.log(`Model: ${modelId}`);
-    console.log(`  Score: ${correct}/${total} (${formatPercentage(correct, total)})`);
-    console.log(`  Average Cost: ${formatCost(avgCost)}`);
-    console.log(`  Average Time: ${formatTime(avgTime)}`);
-    console.log('');
+    
+    leaderboard.push({
+      modelId,
+      name: modelConfig.name || modelConfig.id.split('/').pop(),
+      correct,
+      total,
+      accuracy,
+      avgCost,
+      avgTime,
+      totalCost,
+      totalTime,
+    });
   }
+  
+  return leaderboard.sort((a, b) => b.accuracy - a.accuracy || a.avgCost - b.avgCost);
 }
 
-main().catch((error) => {
-  console.error('Fatal error:', error);
+async function main() {
+  let config, models, allResults;
+  try {
+    config = await readJsonFile(CONFIG_PATH);
+    models = config.models;
+    allResults = await getAllCachedResults();
+  } catch (err) {
+    error(err.message);
+    process.exit(1);
+  }
+
+  if (allResults.size === 0) {
+    warn('No benchmark results found');
+    return;
+  }
+
+  const leaderboard = getLeaderboard(allResults, models);
+  
+  if (leaderboard.length === 0) {
+    warn('No completed results to display');
+    return;
+  }
+  
+  const tableHeaders = ['#', 'Model', 'Score', 'Accuracy', 'Avg Time', 'Total Cost'];
+  const tableRows = leaderboard.map((entry, idx) => {
+    const rank = idx === 0 ? c('yellow', SYMBOLS.star) : dim(`${idx + 1}`);
+    const score = `${entry.correct}/${entry.total}`;
+    const accuracy = formatAccuracy(entry.correct, entry.total);
+    const avgTime = formatDuration(Math.round(entry.avgTime));
+    const totalCost = formatCost(entry.totalCost);
+    
+    return [rank, entry.name, score, accuracy, avgTime, totalCost];
+  });
+  
+  table(tableHeaders, tableRows);
+}
+
+main().catch((err) => {
+  error(`Fatal error: ${err.message}`);
   process.exit(1);
 });
-
