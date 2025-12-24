@@ -157,11 +157,15 @@ export class Grid3D {
     
     updateCameraPosition() {
         const maxDim = Math.max(this.dimensions.x, this.dimensions.y, this.dimensions.z);
-        const distance = maxDim * 2.5;
+        // Increase distance multiplier to make grids more visible
+        const distance = Math.max(maxDim * 3.5, 10);
         // Position camera to look directly from the front
         this.camera.position.set(0, 0, distance);
         this.camera.lookAt(0, 0, 0);
         this.controls.target.set(0, 0, 0);
+        // Adjust controls to allow closer zoom
+        this.controls.minDistance = Math.max(maxDim * 1.5, 5);
+        this.controls.maxDistance = Math.max(maxDim * 8, 50);
         this.controls.update();
     }
     

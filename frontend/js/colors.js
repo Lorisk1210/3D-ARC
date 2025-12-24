@@ -24,6 +24,7 @@ export function getColorRGB(colorId) {
 }
 
 export function initializeColorPalette(container, onColorSelect) {
+    if (!container) return;
     container.innerHTML = '';
     
     for (let i = 0; i < 10; i++) {
