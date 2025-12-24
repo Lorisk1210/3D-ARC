@@ -117,8 +117,8 @@ async function runModelOnPuzzle(modelConfig, puzzle, puzzleId, puzzleIndex, tota
   
   const cached = await getCachedResult(modelId, puzzleId);
   if (cached) {
-    if (cached.finishReason !== 'stop') {
-      const reason = cached.finishReason || 'unknown';
+    if (cached.finishReason !== 'stop' || cached.parseError) {
+      const reason = cached.parseError ? 'parseError' : (cached.finishReason || 'unknown');
       process.stdout.write(`\r    ${c('yellow', SYMBOLS.circle)} ${dim(shortId)} Rerunning (${reason})...\x1b[K`);
     } else {
       const icon = cached.correct ? c('green', SYMBOLS.check) : c('red', SYMBOLS.cross);
