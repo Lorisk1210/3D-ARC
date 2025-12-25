@@ -1,0 +1,8 @@
+{
+  "puzzleId": "ef5d99c0-e702-425d-9cef-968d2796fcaf",
+  "modelId": "deepseek/deepseek-v3.2",
+  "correct": false,
+  "elapsedMs": 2125629,
+  "error": "terminated",
+  "timestamp": "2025-12-24T17:35:58.978Z"
+}

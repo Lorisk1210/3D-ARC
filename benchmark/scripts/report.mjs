@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
-import { readJsonFile, sanitizeForPathSegment } from '../utils.mjs';
+import { readJsonFile, sanitizeForPathSegment, listJsonFiles } from '../utils.mjs';
 import {
   error,
   warn,
@@ -20,6 +20,7 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const CACHE_DIR = path.join(ROOT_DIR, 'benchmark', 'cache');
 const CONFIG_PATH = path.join(ROOT_DIR, 'benchmark', 'config', 'models.json');
+const PUZZLES_DIR = path.join(ROOT_DIR, 'puzzles');
 
 async function getAllCachedResults() {
   const results = new Map();
@@ -42,14 +43,10 @@ async function getAllCachedResults() {
             const result = await readJsonFile(cachePath);
             const modelId = result.modelId || sanitizedModelId.replace(/__/g, '/').replace(/--/g, ':');
             
-            const isCompleted = result.prediction !== null && result.prediction !== undefined && result.finishReason !== 'length';
-            
-            if (isCompleted) {
-              if (!results.has(modelId)) {
-                results.set(modelId, []);
-              }
-              results.get(modelId).push(result);
+            if (!results.has(modelId)) {
+              results.set(modelId, []);
             }
+            results.get(modelId).push(result);
           } catch (err) {
             // Silently skip invalid files
           }
@@ -68,7 +65,7 @@ async function getAllCachedResults() {
   return results;
 }
 
-function getLeaderboard(allResults, models) {
+function getLeaderboard(allResults, models, totalPuzzles) {
   const leaderboard = [];
   
   for (const modelConfig of models) {
@@ -77,13 +74,13 @@ function getLeaderboard(allResults, models) {
     
     if (results.length === 0) continue;
     
-    const correct = results.filter((r) => r.correct).length;
-    const total = results.length;
+    const correct = results.filter((r) => r.correct === true).length;
+    const total = totalPuzzles;
     const accuracy = total > 0 ? correct / total : 0;
     const totalCost = results.reduce((sum, r) => sum + (r.cost || 0), 0);
-    const avgCost = totalCost / total;
+    const avgCost = results.length > 0 ? totalCost / results.length : 0;
     const totalTime = results.reduce((sum, r) => sum + (r.elapsedMs || 0), 0);
-    const avgTime = totalTime / total;
+    const avgTime = results.length > 0 ? totalTime / results.length : 0;
     
     leaderboard.push({
       modelId,
@@ -102,11 +99,12 @@ function getLeaderboard(allResults, models) {
 }
 
 async function main() {
-  let config, models, allResults;
+  let config, models, allResults, puzzleFiles;
   try {
     config = await readJsonFile(CONFIG_PATH);
     models = config.models;
     allResults = await getAllCachedResults();
+    puzzleFiles = await listJsonFiles(PUZZLES_DIR);
   } catch (err) {
     error(err.message);
     process.exit(1);
@@ -117,7 +115,8 @@ async function main() {
     return;
   }
 
-  const leaderboard = getLeaderboard(allResults, models);
+  const totalPuzzles = puzzleFiles.length;
+  const leaderboard = getLeaderboard(allResults, models, totalPuzzles);
   
   if (leaderboard.length === 0) {
     warn('No completed results to display');
