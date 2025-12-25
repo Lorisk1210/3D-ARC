@@ -7,6 +7,8 @@ export class PuzzleManager {
         this.inputDimensions = { x: 3, y: 3, z: 3 };
         this.outputDimensions = { x: 3, y: 3, z: 3 };
         this.exampleViewState = {}; // Track last view for each example
+        this.advancedMode = false;
+        this.exampleDimensions = {}; // Store per-example dimensions: { exampleIndex: { input: {x,y,z}, output: {x,y,z} } }
     }
     
     createEmptyPuzzle() {
@@ -95,9 +97,61 @@ export class PuzzleManager {
     }
     
     getCurrentDimensions() {
+        if (this.advancedMode) {
+            const exampleKey = this.currentExample;
+            if (this.exampleDimensions[exampleKey]) {
+                return this.currentView === 'input'
+                    ? this.exampleDimensions[exampleKey].input || this.inputDimensions
+                    : this.exampleDimensions[exampleKey].output || this.outputDimensions;
+            }
+        }
         return this.currentView === 'input' 
             ? this.inputDimensions 
             : this.outputDimensions;
+    }
+    
+    getExampleDimensions(exampleIndex) {
+        if (this.exampleDimensions[exampleIndex]) {
+            return this.exampleDimensions[exampleIndex];
+        }
+        return {
+            input: { ...this.inputDimensions },
+            output: { ...this.outputDimensions }
+        };
+    }
+    
+    setExampleDimensions(exampleIndex, view, dimensions) {
+        if (!this.exampleDimensions[exampleIndex]) {
+            this.exampleDimensions[exampleIndex] = {
+                input: { ...this.inputDimensions },
+                output: { ...this.outputDimensions }
+            };
+        }
+        this.exampleDimensions[exampleIndex][view] = { ...dimensions };
+        
+        const example = exampleIndex === this.numExamples 
+            ? (view === 'input' ? this.puzzle.test[0] : null)
+            : this.puzzle.train[exampleIndex];
+        
+        if (view === 'input') {
+            if (exampleIndex === this.numExamples) {
+                this.puzzle.test[0].input = this.resizeGrid(
+                    this.puzzle.test[0].input,
+                    dimensions
+                );
+            } else {
+                example.input = this.resizeGrid(example.input, dimensions);
+            }
+        } else {
+            if (exampleIndex === this.numExamples) {
+                this.puzzle.solution = this.resizeGrid(
+                    this.puzzle.solution,
+                    dimensions
+                );
+            } else {
+                example.output = this.resizeGrid(example.output, dimensions);
+            }
+        }
     }
     
     setCurrentExample(index) {
@@ -118,30 +172,35 @@ export class PuzzleManager {
     }
     
     setDimensions(view, dimensions) {
-        if (view === 'input') {
-            this.inputDimensions = { ...dimensions };
-            for (let i = 0; i < this.puzzle.train.length; i++) {
-                this.puzzle.train[i].input = this.resizeGrid(
-                    this.puzzle.train[i].input, 
-                    dimensions
-                );
-            }
-            this.puzzle.test[0].input = this.resizeGrid(
-                this.puzzle.test[0].input, 
-                dimensions
-            );
+        if (this.advancedMode) {
+            const currentExample = this.currentExample;
+            this.setExampleDimensions(currentExample, view, dimensions);
         } else {
-            this.outputDimensions = { ...dimensions };
-            for (let i = 0; i < this.puzzle.train.length; i++) {
-                this.puzzle.train[i].output = this.resizeGrid(
-                    this.puzzle.train[i].output, 
+            if (view === 'input') {
+                this.inputDimensions = { ...dimensions };
+                for (let i = 0; i < this.puzzle.train.length; i++) {
+                    this.puzzle.train[i].input = this.resizeGrid(
+                        this.puzzle.train[i].input, 
+                        dimensions
+                    );
+                }
+                this.puzzle.test[0].input = this.resizeGrid(
+                    this.puzzle.test[0].input, 
+                    dimensions
+                );
+            } else {
+                this.outputDimensions = { ...dimensions };
+                for (let i = 0; i < this.puzzle.train.length; i++) {
+                    this.puzzle.train[i].output = this.resizeGrid(
+                        this.puzzle.train[i].output, 
+                        dimensions
+                    );
+                }
+                this.puzzle.solution = this.resizeGrid(
+                    this.puzzle.solution, 
                     dimensions
                 );
             }
-            this.puzzle.solution = this.resizeGrid(
-                this.puzzle.solution, 
-                dimensions
-            );
         }
     }
     
@@ -187,6 +246,7 @@ export class PuzzleManager {
         this.currentExample = 0;
         this.currentView = 'input';
         this.exampleViewState = {}; // Reset view state tracking
+        this.exampleDimensions = {}; // Reset per-example dimensions
     }
     
     setNumExamples(count) {
@@ -196,22 +256,34 @@ export class PuzzleManager {
         if (count > oldCount) {
             // Add new examples
             for (let i = oldCount; i < count; i++) {
+                const inputDims = this.advancedMode && this.exampleDimensions[i]?.input
+                    ? this.exampleDimensions[i].input
+                    : this.inputDimensions;
+                const outputDims = this.advancedMode && this.exampleDimensions[i]?.output
+                    ? this.exampleDimensions[i].output
+                    : this.outputDimensions;
+                
                 this.puzzle.train.push({
                     input: this.createEmptyGrid(
-                        this.inputDimensions.x,
-                        this.inputDimensions.y,
-                        this.inputDimensions.z
+                        inputDims.x,
+                        inputDims.y,
+                        inputDims.z
                     ),
                     output: this.createEmptyGrid(
-                        this.outputDimensions.x,
-                        this.outputDimensions.y,
-                        this.outputDimensions.z
+                        outputDims.x,
+                        outputDims.y,
+                        outputDims.z
                     )
                 });
             }
         } else if (count < oldCount) {
             // Remove examples
             this.puzzle.train = this.puzzle.train.slice(0, count);
+            
+            // Clean up dimensions for removed examples
+            for (let i = count; i < oldCount; i++) {
+                delete this.exampleDimensions[i];
+            }
             
             // Adjust current example if needed
             if (this.currentExample >= count) {
@@ -221,7 +293,19 @@ export class PuzzleManager {
     }
     
     exportToJSON() {
-        return this.formatCompactJSON(this.puzzle);
+        const exportData = { ...this.puzzle };
+
+        // Add metadata if in advanced mode
+        if (this.advancedMode && Object.keys(this.exampleDimensions).length > 0) {
+            exportData._metadata = {
+                advancedMode: true,
+                exampleDimensions: this.exampleDimensions,
+                inputDimensions: this.inputDimensions,
+                outputDimensions: this.outputDimensions
+            };
+        }
+
+        return this.formatCompactJSON(exportData);
     }
     
     isNumberArray(arr) {
@@ -271,42 +355,121 @@ export class PuzzleManager {
     importFromJSON(jsonString) {
         try {
             const data = JSON.parse(jsonString);
-            
+
             if (!data.train || data.train.length < 1) {
                 throw new Error('Invalid puzzle format: must have at least 1 training example');
             }
-            
+
             if (!data.test || data.test.length !== 1) {
                 throw new Error('Invalid puzzle format: must have exactly 1 test example');
             }
-            
+
             if (!data.solution) {
                 throw new Error('Invalid puzzle format: must have a solution');
             }
-            
+
             this.numExamples = data.train.length;
             this.puzzle = data;
             this.exampleViewState = {}; // Reset view state tracking when importing
-            
-            const input0 = data.train[0].input;
-            this.inputDimensions = {
-                z: input0.length,
-                y: input0[0].length,
-                x: input0[0][0].length
-            };
-            
-            const output0 = data.train[0].output;
-            this.outputDimensions = {
-                z: output0.length,
-                y: output0[0].length,
-                x: output0[0][0].length
-            };
-            
-            return true;
+
+            // Check if this was saved in advanced mode
+            let wasAdvancedMode = false;
+            if (data._metadata && data._metadata.advancedMode) {
+                wasAdvancedMode = true;
+                this.advancedMode = true;
+                this.exampleDimensions = { ...data._metadata.exampleDimensions };
+                this.inputDimensions = { ...data._metadata.inputDimensions };
+                this.outputDimensions = { ...data._metadata.outputDimensions };
+
+                // Remove metadata from puzzle data
+                delete this.puzzle._metadata;
+            } else {
+                // Extract dimensions from actual grid data for each example
+                const allDimensions = [];
+                
+                for (let i = 0; i < data.train.length; i++) {
+                    const input = data.train[i].input;
+                    const output = data.train[i].output;
+                    allDimensions.push({
+                        input: {
+                            z: input.length,
+                            y: input[0].length,
+                            x: input[0][0].length
+                        },
+                        output: {
+                            z: output.length,
+                            y: output[0].length,
+                            x: output[0][0].length
+                        }
+                    });
+                }
+                
+                // Add test dimensions
+                const testInput = data.test[0].input;
+                const solution = data.solution;
+                const testDims = {
+                    input: {
+                        z: testInput.length,
+                        y: testInput[0].length,
+                        x: testInput[0][0].length
+                    },
+                    output: {
+                        z: solution.length,
+                        y: solution[0].length,
+                        x: solution[0][0].length
+                    }
+                };
+                
+                // Check if all examples have the same dimensions
+                const firstInput = allDimensions[0].input;
+                const firstOutput = allDimensions[0].output;
+                let hasDifferentDimensions = false;
+                
+                for (let i = 1; i < allDimensions.length; i++) {
+                    const dims = allDimensions[i];
+                    if (dims.input.x !== firstInput.x || dims.input.y !== firstInput.y || dims.input.z !== firstInput.z ||
+                        dims.output.x !== firstOutput.x || dims.output.y !== firstOutput.y || dims.output.z !== firstOutput.z) {
+                        hasDifferentDimensions = true;
+                        break;
+                    }
+                }
+                
+                // Also check test dimensions
+                if (!hasDifferentDimensions) {
+                    if (testDims.input.x !== firstInput.x || testDims.input.y !== firstInput.y || testDims.input.z !== firstInput.z ||
+                        testDims.output.x !== firstOutput.x || testDims.output.y !== firstOutput.y || testDims.output.z !== firstOutput.z) {
+                        hasDifferentDimensions = true;
+                    }
+                }
+                
+                if (hasDifferentDimensions) {
+                    // Enable advanced mode with per-example dimensions
+                    wasAdvancedMode = true;
+                    this.advancedMode = true;
+                    this.exampleDimensions = {};
+                    
+                    for (let i = 0; i < allDimensions.length; i++) {
+                        this.exampleDimensions[i] = allDimensions[i];
+                    }
+                    this.exampleDimensions[data.train.length] = testDims; // Test index
+                    
+                    // Use first example as global default
+                    this.inputDimensions = { ...firstInput };
+                    this.outputDimensions = { ...firstOutput };
+                } else {
+                    // All examples have same dimensions - standard mode
+                    this.inputDimensions = { ...firstInput };
+                    this.outputDimensions = { ...firstOutput };
+                    this.exampleDimensions = {};
+                    this.advancedMode = false;
+                }
+            }
+
+            return { success: true, advancedMode: wasAdvancedMode };
         } catch (error) {
             console.error('Failed to import puzzle:', error);
             alert('Failed to import puzzle: ' + error.message);
-            return false;
+            return { success: false, advancedMode: false };
         }
     }
     

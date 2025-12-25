@@ -41,6 +41,12 @@ export class Grid3D {
         this.hoveredCube = null;
         this.selectedColor = 0;
         
+        this.multiselectMode = false;
+        this.isSelecting = false;
+        this.selectionStart = null;
+        this.selectionOverlay = document.getElementById('selection-overlay');
+        this.canvasContainer = this.canvas.parentElement;
+        
         this.setupLighting();
         this.setupEventListeners();
         this.animate();
@@ -67,6 +73,9 @@ export class Grid3D {
             e.preventDefault();
             this.onRightClick(e);
         });
+        this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+        this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+        this.canvas.addEventListener('mouseleave', (e) => this.onMouseLeave(e));
     }
     
     onWindowResize() {
@@ -254,6 +263,22 @@ export class Grid3D {
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
         
+        if (this.isSelecting) {
+            const currentX = event.clientX - rect.left;
+            const currentY = event.clientY - rect.top;
+            
+            const left = Math.min(this.selectionStart.x, currentX);
+            const top = Math.min(this.selectionStart.y, currentY);
+            const width = Math.abs(currentX - this.selectionStart.x);
+            const height = Math.abs(currentY - this.selectionStart.y);
+            
+            this.selectionOverlay.style.left = left + 'px';
+            this.selectionOverlay.style.top = top + 'px';
+            this.selectionOverlay.style.width = width + 'px';
+            this.selectionOverlay.style.height = height + 'px';
+            return;
+        }
+        
         this.updateHover();
     }
     
@@ -298,6 +323,7 @@ export class Grid3D {
     }
     
     onMouseClick(event) {
+        if (this.multiselectMode) return;
         if (!this.hoveredCube) return;
         
         const { x, y, z } = this.hoveredCube.userData;
@@ -305,6 +331,7 @@ export class Grid3D {
     }
     
     onRightClick(event) {
+        if (this.multiselectMode) return;
         if (!this.hoveredCube) return;
         
         const { x, y, z } = this.hoveredCube.userData;
@@ -330,6 +357,91 @@ export class Grid3D {
     
     setSelectedColor(colorValue) {
         this.selectedColor = colorValue;
+    }
+    
+    setMultiselectMode(enabled) {
+        this.multiselectMode = enabled;
+        if (enabled) {
+            this.controls.enabled = false;
+            this.canvas.style.cursor = 'crosshair';
+        } else {
+            this.controls.enabled = true;
+            this.canvas.style.cursor = 'default';
+            this.cancelSelection();
+        }
+    }
+    
+    onMouseDown(event) {
+        if (!this.multiselectMode || event.button !== 0) return;
+        if (this.viewMode !== 'single') return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        this.isSelecting = true;
+        this.selectionStart = {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
+            clientX: event.clientX,
+            clientY: event.clientY
+        };
+        
+        this.selectionOverlay.style.display = 'block';
+        this.selectionOverlay.style.left = this.selectionStart.x + 'px';
+        this.selectionOverlay.style.top = this.selectionStart.y + 'px';
+        this.selectionOverlay.style.width = '0px';
+        this.selectionOverlay.style.height = '0px';
+    }
+    
+    onMouseUp(event) {
+        if (!this.isSelecting) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const endX = event.clientX - rect.left;
+        const endY = event.clientY - rect.top;
+        
+        this.applyRectangleSelection(this.selectionStart.x, this.selectionStart.y, endX, endY);
+        this.cancelSelection();
+    }
+    
+    onMouseLeave(event) {
+        if (this.isSelecting) {
+            this.cancelSelection();
+        }
+    }
+    
+    cancelSelection() {
+        this.isSelecting = false;
+        this.selectionStart = null;
+        this.selectionOverlay.style.display = 'none';
+    }
+    
+    applyRectangleSelection(startX, startY, endX, endY) {
+        const minX = Math.min(startX, endX);
+        const maxX = Math.max(startX, endX);
+        const minY = Math.min(startY, endY);
+        const maxY = Math.max(startY, endY);
+        
+        const currentLayerCubes = this.cubes.filter(cube => cube.userData.z === this.currentLayer);
+        
+        currentLayerCubes.forEach(cube => {
+            const screenPos = this.getScreenPosition(cube);
+            if (screenPos.x >= minX && screenPos.x <= maxX && 
+                screenPos.y >= minY && screenPos.y <= maxY) {
+                const { x, y, z } = cube.userData;
+                this.setCellColor(x, y, z, this.selectedColor);
+            }
+        });
+    }
+    
+    getScreenPosition(cube) {
+        const vector = new THREE.Vector3();
+        cube.getWorldPosition(vector);
+        vector.project(this.camera);
+        
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            x: (vector.x * 0.5 + 0.5) * rect.width,
+            y: (-vector.y * 0.5 + 0.5) * rect.height
+        };
     }
     
     getData() {

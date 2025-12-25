@@ -32,6 +32,7 @@
 
         <div class="canvas-container">
             <canvas id="canvas3d"></canvas>
+            <div id="selection-overlay" class="selection-overlay" style="display: none;"></div>
         </div>
 
         <div class="right-panel">
@@ -78,6 +79,9 @@
                     <div class="color-palette" id="color-palette">
                         <!-- Colors will be generated dynamically -->
                     </div>
+                    <div class="multiselect-control" id="multiselect-control" style="display: none; margin-top: 15px;">
+                        <button id="toggle-multiselect" class="tool-btn">Rectangle Select</button>
+                    </div>
                 </section>
             </div>
             
@@ -93,7 +97,7 @@
 
                 <section class="panel-section">
                     <h3>Dimensions</h3>
-                    <div class="dimension-controls">
+                    <div id="standard-dimension-controls" class="dimension-controls">
                         <div class="dim-group">
                             <label>Input Grid (Z, Y, X):</label>
                             <div class="dim-inputs">
@@ -111,6 +115,13 @@
                             </div>
                         </div>
                         <button id="apply-dimensions" class="action-btn">Apply Dimensions</button>
+                        <button id="advanced-grid-mode" class="action-btn secondary-btn">Enable Advanced Mode</button>
+                    </div>
+                    
+                    <div id="advanced-dimension-controls" class="advanced-dimension-controls" style="display: none;">
+                        <div id="advanced-dimensions-list"></div>
+                        <button id="apply-advanced-dimensions" class="action-btn" style="width: 100%; margin-top: 10px;">Apply All Dimensions</button>
+                        <button id="advanced-grid-mode-advanced" class="action-btn secondary-btn" style="width: 100%; margin-top: 12px;">Disable Advanced Mode</button>
                     </div>
                 </section>
             </div>

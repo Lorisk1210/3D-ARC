@@ -39,8 +39,13 @@ export class UIManager {
                 if (e.target.checked) {
                     this.grid3d.setViewMode(e.target.value);
                     this.updateLayerControlVisibility();
+                    this.updateMultiselectVisibility();
                 }
             });
+        });
+        
+        document.getElementById('toggle-multiselect').addEventListener('click', () => {
+            this.toggleMultiselect();
         });
         
         document.getElementById('apply-dimensions').addEventListener('click', () => {
@@ -49,6 +54,21 @@ export class UIManager {
         
         document.getElementById('apply-example-count').addEventListener('click', () => {
             this.applyExampleCount();
+        });
+        
+        const advancedButton = document.getElementById('advanced-grid-mode');
+        advancedButton.addEventListener('click', () => {
+            const isCurrentlyAdvanced = this.puzzleManager.advancedMode;
+            this.toggleAdvancedMode(!isCurrentlyAdvanced);
+        });
+        
+        const advancedButtonAdvanced = document.getElementById('advanced-grid-mode-advanced');
+        advancedButtonAdvanced.addEventListener('click', () => {
+            this.toggleAdvancedMode(false);
+        });
+        
+        document.getElementById('apply-advanced-dimensions').addEventListener('click', () => {
+            this.applyAdvancedDimensions();
         });
         
         document.getElementById('copy-from-input').addEventListener('click', () => {
@@ -158,6 +178,10 @@ export class UIManager {
         this.updateExampleButtons();
         this.loadCurrentGrid();
         this.updateUI();
+        
+        if (this.puzzleManager.advancedMode) {
+            this.updateAdvancedDimensionsUI();
+        }
     }
     
     selectExample(index) {
@@ -231,6 +255,32 @@ export class UIManager {
         }
     }
     
+    updateMultiselectVisibility() {
+        const multiselectControl = document.getElementById('multiselect-control');
+        const toggleBtn = document.getElementById('toggle-multiselect');
+        
+        if (this.grid3d.viewMode === 'single') {
+            multiselectControl.style.display = 'block';
+        } else {
+            multiselectControl.style.display = 'none';
+            toggleBtn.classList.remove('active');
+            this.grid3d.setMultiselectMode(false);
+        }
+    }
+    
+    toggleMultiselect() {
+        const toggleBtn = document.getElementById('toggle-multiselect');
+        const isActive = toggleBtn.classList.contains('active');
+        
+        if (isActive) {
+            toggleBtn.classList.remove('active');
+            this.grid3d.setMultiselectMode(false);
+        } else {
+            toggleBtn.classList.add('active');
+            this.grid3d.setMultiselectMode(true);
+        }
+    }
+    
     updateCopyButtonVisibility() {
         const copyButton = document.getElementById('copy-from-input');
         const view = this.puzzleManager.currentView;
@@ -272,6 +322,188 @@ export class UIManager {
         this.updateCopyButtonVisibility();
     }
     
+    toggleAdvancedMode(enabled) {
+        if (enabled && !this.puzzleManager.advancedMode) {
+            const numExamples = this.puzzleManager.numExamples;
+            const testIndex = numExamples;
+            
+            for (let i = 0; i < numExamples; i++) {
+                if (!this.puzzleManager.exampleDimensions[i]) {
+                    this.puzzleManager.exampleDimensions[i] = {
+                        input: { ...this.puzzleManager.inputDimensions },
+                        output: { ...this.puzzleManager.outputDimensions }
+                    };
+                }
+            }
+            
+            if (!this.puzzleManager.exampleDimensions[testIndex]) {
+                this.puzzleManager.exampleDimensions[testIndex] = {
+                    input: { ...this.puzzleManager.inputDimensions },
+                    output: { ...this.puzzleManager.outputDimensions }
+                };
+            }
+        }
+        
+        this.puzzleManager.advancedMode = enabled;
+        const standardControls = document.getElementById('standard-dimension-controls');
+        const advancedControls = document.getElementById('advanced-dimension-controls');
+        const advancedButton = document.getElementById('advanced-grid-mode');
+        const advancedButtonAdvanced = document.getElementById('advanced-grid-mode-advanced');
+        
+        if (enabled) {
+            standardControls.style.display = 'none';
+            advancedControls.style.display = 'block';
+            advancedButton.textContent = 'Disable Advanced Mode';
+            if (advancedButtonAdvanced) {
+                advancedButtonAdvanced.textContent = 'Disable Advanced Mode';
+            }
+            this.updateAdvancedDimensionsUI();
+        } else {
+            standardControls.style.display = 'block';
+            advancedControls.style.display = 'none';
+            advancedButton.textContent = 'Enable Advanced Mode';
+            if (advancedButtonAdvanced) {
+                advancedButtonAdvanced.textContent = 'Disable Advanced Mode';
+            }
+        }
+    }
+    
+    updateAdvancedDimensionsUI() {
+        const container = document.getElementById('advanced-dimensions-list');
+        container.innerHTML = '';
+        
+        const numExamples = this.puzzleManager.numExamples;
+        
+        for (let i = 0; i < numExamples; i++) {
+            const exampleDims = this.puzzleManager.getExampleDimensions(i);
+            
+            const exampleDiv = document.createElement('div');
+            exampleDiv.className = 'advanced-example-group';
+            
+            const title = document.createElement('h4');
+            title.textContent = `Example ${i + 1}`;
+            title.className = 'advanced-example-title';
+            exampleDiv.appendChild(title);
+            
+            const inputGroup = this.createDimensionInputGroup(
+                `example-${i}-input`,
+                'Input',
+                exampleDims.input
+            );
+            exampleDiv.appendChild(inputGroup);
+            
+            const outputGroup = this.createDimensionInputGroup(
+                `example-${i}-output`,
+                'Output',
+                exampleDims.output
+            );
+            exampleDiv.appendChild(outputGroup);
+            
+            container.appendChild(exampleDiv);
+        }
+        
+        const testDiv = document.createElement('div');
+        testDiv.className = 'advanced-example-group';
+        
+        const testTitle = document.createElement('h4');
+        testTitle.textContent = 'Test';
+        testTitle.className = 'advanced-example-title';
+        testDiv.appendChild(testTitle);
+        
+        const testDims = this.puzzleManager.getExampleDimensions(numExamples);
+        
+        const testInputGroup = this.createDimensionInputGroup(
+            `example-${numExamples}-input`,
+            'Input',
+            testDims.input
+        );
+        testDiv.appendChild(testInputGroup);
+        
+        const testOutputGroup = this.createDimensionInputGroup(
+            `example-${numExamples}-output`,
+            'Output',
+            testDims.output
+        );
+        testDiv.appendChild(testOutputGroup);
+        
+        container.appendChild(testDiv);
+    }
+    
+    createDimensionInputGroup(idPrefix, label, dimensions) {
+        const group = document.createElement('div');
+        group.className = 'dim-group';
+        
+        const labelEl = document.createElement('label');
+        labelEl.textContent = `${label} Grid (Z, Y, X):`;
+        group.appendChild(labelEl);
+        
+        const inputs = document.createElement('div');
+        inputs.className = 'dim-inputs';
+        
+        const zInput = document.createElement('input');
+        zInput.type = 'number';
+        zInput.id = `${idPrefix}-z`;
+        zInput.min = '1';
+        zInput.max = '10';
+        zInput.value = dimensions.z;
+        zInput.title = 'Layers (Z)';
+        inputs.appendChild(zInput);
+        
+        const yInput = document.createElement('input');
+        yInput.type = 'number';
+        yInput.id = `${idPrefix}-y`;
+        yInput.min = '1';
+        yInput.max = '10';
+        yInput.value = dimensions.y;
+        yInput.title = 'Rows (Y)';
+        inputs.appendChild(yInput);
+        
+        const xInput = document.createElement('input');
+        xInput.type = 'number';
+        xInput.id = `${idPrefix}-x`;
+        xInput.min = '1';
+        xInput.max = '10';
+        xInput.value = dimensions.x;
+        xInput.title = 'Columns (X)';
+        inputs.appendChild(xInput);
+        
+        group.appendChild(inputs);
+        return group;
+    }
+    
+    applyAdvancedDimensions() {
+        const numExamples = this.puzzleManager.numExamples;
+        
+        for (let i = 0; i < numExamples; i++) {
+            const inputX = parseInt(document.getElementById(`example-${i}-input-x`).value);
+            const inputY = parseInt(document.getElementById(`example-${i}-input-y`).value);
+            const inputZ = parseInt(document.getElementById(`example-${i}-input-z`).value);
+            
+            const outputX = parseInt(document.getElementById(`example-${i}-output-x`).value);
+            const outputY = parseInt(document.getElementById(`example-${i}-output-y`).value);
+            const outputZ = parseInt(document.getElementById(`example-${i}-output-z`).value);
+            
+            this.puzzleManager.setExampleDimensions(i, 'input', { x: inputX, y: inputY, z: inputZ });
+            this.puzzleManager.setExampleDimensions(i, 'output', { x: outputX, y: outputY, z: outputZ });
+        }
+        
+        const testIndex = numExamples;
+        const testInputX = parseInt(document.getElementById(`example-${testIndex}-input-x`).value);
+        const testInputY = parseInt(document.getElementById(`example-${testIndex}-input-y`).value);
+        const testInputZ = parseInt(document.getElementById(`example-${testIndex}-input-z`).value);
+        
+        const testOutputX = parseInt(document.getElementById(`example-${testIndex}-output-x`).value);
+        const testOutputY = parseInt(document.getElementById(`example-${testIndex}-output-y`).value);
+        const testOutputZ = parseInt(document.getElementById(`example-${testIndex}-output-z`).value);
+        
+        this.puzzleManager.setExampleDimensions(testIndex, 'input', { x: testInputX, y: testInputY, z: testInputZ });
+        this.puzzleManager.setExampleDimensions(testIndex, 'output', { x: testOutputX, y: testOutputY, z: testOutputZ });
+        
+        this.loadCurrentGrid();
+        this.updateUI();
+        this.updateCopyButtonVisibility();
+    }
+    
     newPuzzle() {
         this.puzzleManager.newPuzzle();
         this.puzzleManager.setCurrentExample(0);
@@ -290,6 +522,7 @@ export class UIManager {
         document.getElementById('output-y').value = 3;
         document.getElementById('output-z').value = 3;
         document.getElementById('example-count').value = this.puzzleManager.numExamples;
+        this.toggleAdvancedMode(false);
         
         this.loadCurrentGrid();
         this.updateUI();
@@ -321,14 +554,18 @@ export class UIManager {
         const view = this.puzzleManager.currentView;
         const example = this.puzzleManager.currentExample;
         
-        if (view === 'input') {
-            document.getElementById('input-x').value = dims.x;
-            document.getElementById('input-y').value = dims.y;
-            document.getElementById('input-z').value = dims.z;
+        if (!this.puzzleManager.advancedMode) {
+            if (view === 'input') {
+                document.getElementById('input-x').value = dims.x;
+                document.getElementById('input-y').value = dims.y;
+                document.getElementById('input-z').value = dims.z;
+            } else {
+                document.getElementById('output-x').value = dims.x;
+                document.getElementById('output-y').value = dims.y;
+                document.getElementById('output-z').value = dims.z;
+            }
         } else {
-            document.getElementById('output-x').value = dims.x;
-            document.getElementById('output-y').value = dims.y;
-            document.getElementById('output-z').value = dims.z;
+            this.updateAdvancedDimensionsUI();
         }
         
         const exampleCountInput = document.getElementById('example-count');
@@ -339,6 +576,7 @@ export class UIManager {
         this.updateLayerDisplay();
         this.updateLayerControlVisibility();
         this.updateCopyButtonVisibility();
+        this.updateMultiselectVisibility();
     }
     
     selectColor(colorId) {
@@ -433,23 +671,26 @@ export class UIManager {
             const result = await response.json();
             
             if (result.success) {
-                const success = this.puzzleManager.importFromJSON(JSON.stringify(result.puzzle));
+                const importResult = this.puzzleManager.importFromJSON(JSON.stringify(result.puzzle));
                 
-                if (success) {
+                if (importResult.success) {
                     this.puzzleManager.setCurrentExample(0);
                     this.puzzleManager.setCurrentView('input');
-                    
+
                     this.updateExampleButtons();
                     document.querySelector('[data-example="0"]').classList.add('active');
-                    
+
                     document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
                     document.querySelector('[data-view="input"]').classList.add('active');
-                    
+
                     document.getElementById('example-count').value = this.puzzleManager.numExamples;
-                    
+
+                    // Enable advanced mode if the puzzle was saved in advanced mode
+                    this.toggleAdvancedMode(importResult.advancedMode);
+
                     this.loadCurrentGrid();
                     this.updateUI();
-                    
+
                     document.getElementById('puzzle-list-modal').style.display = 'none';
                 }
             } else {
@@ -479,32 +720,35 @@ export class UIManager {
     
     importJSON(file) {
         if (!file) return;
-        
+
         const reader = new FileReader();
         reader.onload = (e) => {
             const jsonString = e.target.result;
-            const success = this.puzzleManager.importFromJSON(jsonString);
-            
-            if (success) {
+            const result = this.puzzleManager.importFromJSON(jsonString);
+
+            if (result.success) {
                 this.puzzleManager.setCurrentExample(0);
                 this.puzzleManager.setCurrentView('input');
-                
+
                 this.updateExampleButtons();
                 document.querySelector('[data-example="0"]').classList.add('active');
-                
+
                 document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
                 document.querySelector('[data-view="input"]').classList.add('active');
-                
+
                 document.getElementById('example-count').value = this.puzzleManager.numExamples;
-                
+
+                // Enable advanced mode if the puzzle was saved in advanced mode
+                this.toggleAdvancedMode(result.advancedMode);
+
                 this.loadCurrentGrid();
                 this.updateUI();
-                
+
                 showAlert('Puzzle imported successfully!');
             }
         };
         reader.readAsText(file);
-        
+
         document.getElementById('file-input').value = '';
     }
 }
