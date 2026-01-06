@@ -1,0 +1,23 @@
+{
+  "puzzleId": "0bb85285-ef3f-46ab-9ea1-aa23d1633b3c",
+  "modelId": "google/gemini-3-flash-preview",
+  "correct": false,
+  "elapsedMs": 1035,
+  "promptTokens": 1647,
+  "completionTokens": 47,
+  "cost": 0.0009645,
+  "prediction": [
+    [
+      [1, 1],
+      [1, 1]
+    ],
+    [
+      [1, 1],
+      [1, 1]
+    ]
+  ],
+  "parseError": null,
+  "rawResponse": "[\n  [\n    [1, 1],\n    [1, 1]\n  ],\n  [\n    [1, 1],\n    [1, 1]\n  ]\n]",
+  "finishReason": "stop",
+  "timestamp": "2025-12-24T14:31:52.899Z"
+}

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D ARC Puzzle Comparison</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .split-canvas-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100%;
+            gap: 1px;
+            background-color: #0a0a0a;
+        }
+        
+        .canvas-wrapper {
+            background-color: #1a1a1a;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #canvas-prediction,
+        #canvas-solution {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .canvas-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(26, 26, 26, 0.8);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .canvas-label.prediction { color: #ff6b6b; }
+        .canvas-label.solution { color: #51cf66; }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .status-badge.correct {
+            background-color: rgba(81, 207, 102, 0.2);
+            color: #51cf66;
+            border: 1px solid rgba(81, 207, 102, 0.3);
+        }
+        
+        .status-badge.incorrect {
+            background-color: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .stat-item {
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+        
+        .stat-label {
+            font-size: 10px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e0e0e0;
+        }
+
+        .select-input {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: #1a1a1a;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .select-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel: Navigation & Selection -->
+        <div class="left-panel">
+            <section class="panel-section">
+                <h3>Puzzle Selection</h3>
+                <div style="margin-bottom: 15px;">
+                    <label class="stat-label">Select Puzzle</label>
+                    <select id="puzzle-select" class="select-input">
+                        <option value="">Loading puzzles...</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="stat-label">Select Model</label>
+                    <select id="model-select" class="select-input">
+                        <option value="">Loading models...</option>
+                    </select>
+                </div>
+                
+                <button id="load-result-btn" class="action-btn" style="width: 100%; margin-top: 15px;">Load Comparison</button>
+            </section>
+
+            <section class="panel-section" id="result-info" style="display: none;">
+                <h3>Result Statistics</h3>
+                <div id="status-badge" class="status-badge">
+                    <span id="status-text">Status</span>
+                </div>
+                
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Time</div>
+                        <div class="stat-value" id="time-text">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Cost</div>
+                        <div class="stat-value" id="cost-text">-</div>
+                    </div>
+                    <div class="stat-item" style="grid-column: span 2;">
+                        <div class="stat-label">Tokens (Prompt + Compl.)</div>
+                        <div class="stat-value" id="tokens-text">-</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Middle: Split Canvas -->
+        <div class="canvas-container" style="background-color: #0a0a0a;">
+            <div class="split-canvas-container">
+                <div class="canvas-wrapper">
+                    <div class="canvas-label prediction">Model Prediction</div>
+                    <canvas id="canvas-prediction"></canvas>
+                </div>
+                <div class="canvas-wrapper">
+                    <div class="canvas-label solution">Actual Solution</div>
+                    <canvas id="canvas-solution"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: View Controls -->
+        <div class="right-panel">
+            <div class="right-panel-tabs">
+                <button class="panel-tab active" data-tab="view">View Controls</button>
+            </div>
+            
+            <div class="tab-content active" id="tab-view">
+                <section class="panel-section">
+                    <h3>View Mode</h3>
+                    <div class="view-mode">
+                        <label>
+                            <input type="radio" name="view-mode" value="all" checked>
+                            All Layers
+                        </label>
+                        <label>
+                            <input type="radio" name="view-mode" value="xray">
+                            Xray Mode
+                        </label>
+                        <label>
+                            <input type="radio" name="view-mode" value="single">
+                            Single Layer
+                        </label>
+                    </div>
+                </section>
+
+                <section class="panel-section" id="layer-control-section">
+                    <h3>Layer Control</h3>
+                    <div class="layer-control">
+                        <div class="layer-display">
+                            Layer: <span id="current-layer">1</span> / <span id="total-layers">1</span>
+                        </div>
+                        <div class="layer-buttons">
+                            <button id="prev-layer" class="layer-btn">← Prev</button>
+                            <button id="next-layer" class="layer-btn">Next →</button>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="panel-section">
+                     <a href="index.html" class="action-btn" style="display: block; text-align: center; text-decoration: none;">Back to Builder</a>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script type="module" src="js/compare.js"></script>
+</body>
+</html>

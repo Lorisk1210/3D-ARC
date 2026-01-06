@@ -7,6 +7,8 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = 3000;
 const PUZZLES_DIR = path.join(__dirname, 'puzzles');
+const FRONTEND_DIR = path.join(__dirname, 'frontend');
+const CACHE_DIR = path.join(__dirname, 'benchmark', 'cache');
 
 function isNumberArray(arr) {
     return Array.isArray(arr) && arr.every(item => typeof item === 'number');
@@ -54,7 +56,7 @@ function formatCompactJSON(obj, indent = 0) {
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(FRONTEND_DIR));
 
 async function ensurePuzzlesDir() {
     try {
@@ -126,6 +128,46 @@ app.delete('/api/puzzles/:id', async (req, res) => {
     } catch (error) {
         console.error('Error deleting puzzle:', error);
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/cache/models', async (req, res) => {
+    try {
+        const models = [];
+        
+        if (await fs.access(CACHE_DIR).then(() => true).catch(() => false)) {
+            const entries = await fs.readdir(CACHE_DIR, { withFileTypes: true });
+            for (const entry of entries) {
+                if (entry.isDirectory()) {
+                    models.push({ id: entry.name });
+                }
+            }
+        }
+        
+        res.json({ success: true, models: models });
+    } catch (error) {
+        console.error('Error listing cache models:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/cache/:modelId/:puzzleId', async (req, res) => {
+    try {
+        const modelId = req.params.modelId;
+        const puzzleId = req.params.puzzleId;
+        const cachePath = path.join(CACHE_DIR, modelId, `${puzzleId}.json`);
+        
+        const data = await fs.readFile(cachePath, 'utf8');
+        const result = JSON.parse(data);
+        
+        res.json({ success: true, result: result });
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            res.status(404).json({ success: false, error: 'Cache result not found' });
+        } else {
+            console.error('Error loading cache result:', error);
+            res.status(500).json({ success: false, error: error.message });
+        }
     }
 });
 

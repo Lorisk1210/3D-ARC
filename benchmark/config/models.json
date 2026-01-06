@@ -1,0 +1,14 @@
+{
+  "models": [
+    {
+      "id": "tngtech/deepseek-r1t2-chimera:free",
+      "temperature": 0,
+      "max_tokens": 100000,
+      "pricing": {
+        "prompt_per_million_usd": null,
+        "completion_per_million_usd": null
+      }
+    }
+  ]
+}
+

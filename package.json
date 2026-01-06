@@ -4,12 +4,15 @@
   "description": "3D ARC Puzzle Builder",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "benchmark": "node benchmark/scripts/run.mjs",
+    "benchmark:report": "node benchmark/scripts/report.mjs"
   },
   "dependencies": {
-    "express": "^4.18.2",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "openai": "^6.15.0",
     "uuid": "^9.0.0"
   }
 }
-
